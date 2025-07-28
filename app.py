@@ -173,16 +173,18 @@ if prompt := st.chat_input("Create an MSA for..."):
                             logger.error(error_msg)
                             thought_process += f"    ↳ Error: {error_msg}\n"
                     
-                    final_summary = planner.synthesize_final_response(
-                        initial_query=prompt,
-                        final_state=execution_state
-                    )
-                    
+                    # Filter out the warnings from the thought process for the final response
+                    final_response_lines = []
+                    for line in thought_process.strip().split('\n'):
+                        if "↳ Warning:" not in line:
+                            final_response_lines.append(line)
+                    final_response = "\n".join(final_response_lines)
+
                     with st.expander("Show thought process"):
                         st.markdown(f"```markdown\n{thought_process.strip()}\n```")
-                    st.markdown(final_summary)
-                    st.session_state.messages.append({"role": "assistant", "content": final_summary})
-                    st.session_state.memory.save_context({"input": prompt}, {"output": final_summary})
+                    st.markdown(final_response)
+                    st.session_state.messages.append({"role": "assistant", "content": final_response})
+                    st.session_state.memory.save_context({"input": prompt}, {"output": final_response})
                     
             except Exception as e:
                 error_msg = f"An error occurred during execution: {e}"
