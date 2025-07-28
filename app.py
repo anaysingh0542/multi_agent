@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
+# The 'dotenv' import has been removed as it's not needed for Streamlit secrets
 from langchain.memory import ConversationBufferMemory
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from core.memory_manager import memory_manager, LangChainMemoryAdapter
@@ -36,9 +36,10 @@ st.title("Multi-Agent Co-Pilot 🤖")
 def initialize_agents() -> tuple[PlannerAgent, Dict[str, Any]]:
     """Initialize all agents with proper error handling."""
     try:
-        load_dotenv()
+        # The call to load_dotenv() has been removed.
+        # Streamlit automatically loads secrets as environment variables.
         if not os.getenv("OPENAI_API_KEY"):
-            st.error("FATAL: OPENAI_API_KEY environment variable not set!")
+            st.error("FATAL: OPENAI_API_KEY environment variable not set! Please add it to your Streamlit secrets.")
             st.stop()
         
         planner = PlannerAgent(agent_knowledge_path="./data/agent_routing_knowledge.xlsx")
@@ -163,16 +164,16 @@ if prompt := st.chat_input("Create an MSA for..."):
                         if not target_agent:
                             warning_msg = f"Skipping step: Unknown agent '{agent_name}' in the plan."
                             logger.warning(warning_msg)
-                            thought_process += f"   ↳ Warning: {warning_msg}\n"
+                            thought_process += f"    ↳ Warning: {warning_msg}\n"
                             continue
 
                         try:
                             result = target_agent.run(task=task_description, state=execution_state)
-                            thought_process += f"   ↳ Result: {result}\n"
+                            thought_process += f"    ↳ Result: {result}\n"
                         except Exception as e:
                             error_msg = f"Error executing {agent_name}: {e}"
                             logger.error(error_msg)
-                            thought_process += f"   ↳ Error: {error_msg}\n"
+                            thought_process += f"    ↳ Error: {error_msg}\n"
                     
                     final_summary = planner.synthesize_final_response(
                         initial_query=prompt,
