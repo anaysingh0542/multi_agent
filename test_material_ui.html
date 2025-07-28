@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Design UI Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "@material/web/": "https://esm.run/@material/web/"
+            }
+        }
+    </script>
+    <script type="module">
+        import '@material/web/all.js';
+        import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+        document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+        
+        // Test script to verify components are loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Testing Material Design components...');
+            
+            setTimeout(() => {
+                const textField = document.querySelector('md-outlined-text-field');
+                const button = document.querySelector('md-filled-button');
+                const iconButton = document.querySelector('md-icon-button');
+                const progress = document.querySelector('md-linear-progress');
+                
+                console.log('Text Field loaded:', !!textField);
+                console.log('Button loaded:', !!button);
+                console.log('Icon Button loaded:', !!iconButton);
+                console.log('Progress loaded:', !!progress);
+                
+                if (textField && button && iconButton && progress) {
+                    console.log('✅ All Material Design components loaded successfully!');
+                    document.getElementById('status').textContent = '✅ Material Design components working!';
+                    document.getElementById('status').style.color = 'green';
+                } else {
+                    console.log('❌ Some Material Design components failed to load');
+                    document.getElementById('status').textContent = '❌ Some components failed to load';
+                    document.getElementById('status').style.color = 'red';
+                }
+            }, 1000);
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            padding: 20px;
+            background-color: #0B1821;
+            color: #F5F6F6;
+        }
+        
+        md-outlined-text-field {
+            --md-outlined-text-field-container-color: transparent;
+            --md-outlined-text-field-outline-color: #0D5E68;
+            --md-outlined-text-field-input-text-color: #F5F6F6;
+            --md-outlined-text-field-label-text-color: #F5F6F6;
+        }
+        
+        md-filled-button {
+            --md-filled-button-container-color: #818BFB;
+            --md-filled-button-label-text-color: #0B1821;
+        }
+        
+        md-icon-button {
+            --md-icon-button-icon-color: #818BFB;
+        }
+        
+        md-linear-progress {
+            --md-linear-progress-active-indicator-color: #818BFB;
+            --md-linear-progress-track-color: #0D5E68;
+        }
+    </style>
+</head>
+<body>
+    <h1>Material Design UI Test</h1>
+    <p id="status">Loading components...</p>
+    
+    <h2>Text Input</h2>
+    <md-outlined-text-field label="Test Input" value="Hello Material Design!"></md-outlined-text-field>
+    
+    <h2>Buttons</h2>
+    <md-filled-button>Test Button</md-filled-button>
+    <md-icon-button>
+        <md-icon>favorite</md-icon>
+    </md-icon-button>
+    
+    <h2>Progress</h2>
+    <md-linear-progress value="0.5"></md-linear-progress>
+    
+    <h2>Progress (Indeterminate)</h2>
+    <md-linear-progress indeterminate></md-linear-progress>
+</body>
+</html>

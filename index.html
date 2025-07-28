@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sirion Multi-Agent Co-Pilot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "@material/web/": "https://esm.run/@material/web/"
+            }
+        }
+    </script>
+    <script type="module">
+        import '@material/web/all.js';
+        import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+        document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+    </script>
+    <style>
+        :root {
+            --sirion-midnight: #0B1821;
+            --sirion-cloud: #F5F6F6;
+            --sirion-lilac: #818BFB;
+            --sirion-teal: #0D5E68;
+            --chat-bg: #1C2C35;
+            
+            /* Material Design 3 theme tokens */
+            --md-sys-color-surface: var(--sirion-midnight);
+            --md-sys-color-on-surface: var(--sirion-cloud);
+            --md-sys-color-primary: var(--sirion-lilac);
+            --md-sys-color-on-primary: var(--sirion-midnight);
+            --md-sys-color-surface-variant: var(--chat-bg);
+            --md-sys-color-outline: var(--sirion-teal);
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--sirion-midnight);
+            color: var(--sirion-cloud);
+        }
+        .chat-bubble-user {
+            background-color: var(--sirion-lilac);
+            color: var(--sirion-midnight);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        }
+        .chat-bubble-copilot {
+            background-color: var(--chat-bg);
+            color: var(--sirion-cloud);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        }
+        .thought-process {
+            background-color: #00000040;
+            border-left: 2px solid var(--sirion-teal);
+        }
+        
+        /* Material Web component customization */
+        md-outlined-text-field {
+            --md-outlined-text-field-container-color: transparent;
+            --md-outlined-text-field-outline-color: var(--sirion-teal);
+            --md-outlined-text-field-input-text-color: var(--sirion-cloud);
+            --md-outlined-text-field-label-text-color: var(--sirion-cloud);
+        }
+        
+        md-filled-button {
+            --md-filled-button-container-color: var(--sirion-lilac);
+            --md-filled-button-label-text-color: var(--sirion-midnight);
+        }
+        
+        md-icon-button {
+            --md-icon-button-icon-color: var(--sirion-lilac);
+        }
+        
+        md-linear-progress {
+            --md-linear-progress-active-indicator-color: var(--sirion-lilac);
+            --md-linear-progress-track-color: var(--sirion-teal);
+        }
+        
+        md-text-button {
+            --md-text-button-label-text-color: var(--sirion-lilac);
+            --md-text-button-icon-color: var(--sirion-lilac);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--sirion-midnight); }
+        ::-webkit-scrollbar-thumb { background-color: var(--sirion-teal); border-radius: 4px; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <header class="p-4 text-center border-b" style="border-color: var(--sirion-teal);">
+        <h1 class="text-xl font-semibold md-typescale-headline-medium">Multi-Agent Co-Pilot</h1>
+    </header>
+
+    <main id="chat-container" class="flex-1 p-4 overflow-y-auto w-full max-w-4xl mx-auto">
+        <div id="message-list" class="space-y-6">
+            <div class="flex items-start gap-4 flex-row">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg" style="background-color: var(--sirion-lilac);"><p>S</p></div>
+                <div class="p-4 rounded-lg max-w-xl chat-bubble-copilot">
+                    <p class="font-medium">Hello! I'm Sirion's Multi-Agent Co-Pilot. How can I help you today?</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 w-full max-w-4xl mx-auto">
+        <form id="message-form" class="flex items-center gap-3 p-2">
+            <md-outlined-text-field 
+                id="message-input" 
+                label="Ask the Co-Pilot..." 
+                placeholder="Onboard a client named..."
+                style="flex: 1;"
+                autocomplete="off">
+            </md-outlined-text-field>
+            <md-icon-button type="submit" id="submit-button">
+                <md-icon>send</md-icon>
+            </md-icon-button>
+        </form>
+    </footer>
+
+    <script>
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const messageList = document.getElementById('message-list');
+        const submitButton = document.getElementById('submit-button');
+        
+        // IMPORTANT: REPLACE THIS URL AFTER YOU DEPLOY
+        const API_URL = 'https://api-bh2keylv6q-uc.a.run.app/invoke-agent'; 
+        let chatHistory = [{ sender: 'copilot', text: 'Hello! I\'m Sirion\'s Multi-Agent Co-Pilot. How can I help you today?' }];
+
+        messageForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const query = messageInput.value.trim();
+            if (!query) return;
+
+            chatHistory.push({ sender: 'user', text: query });
+            appendMessage(query, 'user');
+            messageInput.value = '';
+            
+            const thinkingMessageId = `copilot-thinking-${Date.now()}`;
+            showLoadingIndicator(thinkingMessageId);
+
+            callApi(query, thinkingMessageId);
+        });
+
+        // Add Enter key support for the material text field
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        async function callApi(query, thinkingMessageId) {
+             try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, history: chatHistory })
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                
+                const data = await response.json();
+
+                chatHistory.push({ sender: 'copilot', text: data.final_summary });
+                updateFinalMessage(thinkingMessageId, data.final_summary, data.thought_process, data.message_id);
+
+            } catch (error) {
+                console.error("Failed to call backend:", error);
+                const errorMessage = `An error occurred: ${error.message}. Please check the backend terminal or server logs.`;
+                chatHistory.push({ sender: 'copilot', text: errorMessage });
+                updateFinalMessage(thinkingMessageId, errorMessage, "Error state, no thought process available.", "error-" + Date.now());
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const isUser = sender === 'user';
+            const bubbleClass = isUser ? 'chat-bubble-user self-end' : 'chat-bubble-copilot';
+            const iconHtml = isUser ? `<div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-gray-600 font-semibold"><p>You</p></div>` 
+                                    : `<div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg" style="background-color: var(--sirion-lilac);"><p>S</p></div>`;
+            const messageAlignment = isUser ? 'flex-row-reverse' : 'flex-row';
+
+            const messageHtml = `
+                <div class="flex items-start gap-4 ${messageAlignment}">
+                    ${iconHtml}
+                    <div class="p-4 rounded-lg max-w-xl ${bubbleClass}">
+                        <p class="font-medium">${text.replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>`;
+            messageList.insertAdjacentHTML('beforeend', messageHtml);
+            messageList.parentElement.scrollTop = messageList.parentElement.scrollHeight;
+        }
+
+        function showLoadingIndicator(id) {
+            const loadingHtml = `
+                <div id="${id}" class="flex items-start gap-4 flex-row">
+                    <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg" style="background-color: var(--sirion-lilac);"><p>S</p></div>
+                    <div class="p-4 rounded-lg chat-bubble-copilot">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-sm" style="color: var(--sirion-cloud);">Co-Pilot is thinking...</span>
+                        </div>
+                        <md-linear-progress indeterminate></md-linear-progress>
+                    </div>
+                </div>`;
+            messageList.insertAdjacentHTML('beforeend', loadingHtml);
+            messageList.parentElement.scrollTop = messageList.parentElement.scrollHeight;
+        }
+
+        function updateFinalMessage(id, summary, thoughts, messageId) {
+            const messageDiv = document.getElementById(id);
+            if (!messageDiv) return;
+            
+            const feedbackHtml = `
+                <div class="flex gap-2 mt-3">
+                    <md-icon-button onclick="sendFeedback('${messageId}', 'up', this)" data-id="${messageId}">
+                        <md-icon>thumb_up</md-icon>
+                    </md-icon-button>
+                    <md-icon-button onclick="sendFeedback('${messageId}', 'down', this)" data-id="${messageId}">
+                        <md-icon>thumb_down</md-icon>
+                    </md-icon-button>
+                </div>
+            `;
+            
+            messageDiv.innerHTML = `
+                <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg" style="background-color: var(--sirion-lilac);"><p>S</p></div>
+                <div class="p-4 rounded-lg max-w-xl chat-bubble-copilot">
+                    <p class="font-medium">${summary.replace(/\n/g, '<br>')}</p>
+                    <div class="flex items-center justify-between mt-3">
+                        <md-text-button onclick="toggleThoughtProcess(this)">
+                            <md-icon slot="icon">expand_more</md-icon>
+                            Show thought process
+                        </md-text-button>
+                        ${feedbackHtml}
+                    </div>
+                    <div class="thought-process mt-2 p-3 rounded-md text-xs" style="display: none;">
+                        <pre class="whitespace-pre-wrap font-mono">${thoughts}</pre>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function sendFeedback(messageId, feedbackType, buttonElement) {
+            try {
+                await fetch(`${API_URL}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message_id: messageId, feedback_type: feedbackType })
+                });
+                
+                // Visually indicate that feedback was sent
+                const parent = buttonElement.parentElement;
+                parent.querySelectorAll('md-icon-button').forEach(btn => btn.disabled = true);
+                buttonElement.style.transform = 'scale(1.1)';
+                buttonElement.style.setProperty('--md-icon-button-icon-color', 'var(--sirion-lilac)');
+                buttonElement.style.opacity = '0.7';
+
+            } catch (error) {
+                console.error("Failed to send feedback:", error);
+            }
+        }
+
+        function toggleThoughtProcess(button) {
+            const thoughtDiv = button.parentElement.nextElementSibling;
+            const icon = button.querySelector('md-icon');
+            if (thoughtDiv.style.display === 'none') {
+                thoughtDiv.style.display = 'block';
+                icon.textContent = 'expand_less';
+                button.innerHTML = `<md-icon slot="icon">expand_less</md-icon>Hide thought process`;
+            } else {
+                thoughtDiv.style.display = 'none';
+                icon.textContent = 'expand_more';
+                button.innerHTML = `<md-icon slot="icon">expand_more</md-icon>Show thought process`;
+            }
+        }
+    </script>
+</body>
+</html>
