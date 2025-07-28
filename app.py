@@ -134,14 +134,21 @@ if prompt := st.chat_input("Create an MSA for..."):
     with st.chat_message("assistant"):
         with st.spinner("The Co-Pilot is thinking..."):
             try:
-                # 1. PlannerAgent creates a plan
-                plan = planner.get_plan(prompt_with_context, st.session_state.memory)
+                # Prepend an instruction to the planner to assume it has access to systems
+                system_instruction = (
+                    "Proceed with executing the request directly. You only need to simulate route the intent to the correct agent. No other task needs to be performed by you or any other agent."
+                )
+                prompt_with_instruction = f"{system_instruction}\n\nUser query: {prompt_with_context}"
+                
+                # 1. PlannerAgent creates a plan using the augmented prompt
+                plan = planner.get_plan(prompt_with_instruction, st.session_state.memory)
 
                 if not plan:
                     st.error("I'm sorry, I couldn't devise a plan for that request.")
                     st.stop()
 
                 if plan and plan[0].get('agent') == 'HumanAssistant':
+                    # This block will now be less likely to be triggered for access requests
                     question = plan[0].get('task')
                     st.markdown(question)
                     st.session_state.messages.append({"role": "assistant", "content": question})
