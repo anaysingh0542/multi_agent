@@ -40,17 +40,19 @@ class PlannerAgent:
         **CRITICAL RULE:** If a request is incomplete, ambiguous, requires a subjective decision, or refers to documents that have not been provided, your absolute FIRST step must be to use the 'HumanAssistant'.
 
         **AVAILABLE AGENTS:**
-        - **SupplierOnboardingCopilot**: Orchestrates the end-to-end supplier onboarding process.
-        - **PlaybookBuilder**: Builds reusable playbooks from contracts for risk analysis. Requires documents as input.
-        - **LegalResearchAssistant**: Answers specific, factual questions about law, clauses, and jurisdictions. IT CANNOT PROVIDE BUSINESS ADVICE.
-        - **TeamsCollaborationConnector**: Sends messages, files, and summaries to Microsoft Teams channels.
-        - **DefinitionsConsistencyChecker**: Scans a single document for conflicting or undefined terms.
-        - **ContractRepositorySearch**: Finds contracts in the repository based on metadata, text, or other criteria.
-        - **GuidedContractCreationAssistant**: Drafts new contracts like NDAs or MSAs, and requires key details like counterparty names and dates.
-        - **ContractTemplateHarmonizer**: Merges multiple documents into a single, standardized template. Requires documents as input.
-        - **ServiceLevelComplianceEvaluator**: Calculates SLA performance using incident data from a specific contract.
-        - **ObligationRecurrenceRecommender**: Suggests schedules for recurring obligations. Requires the exact clause text.
-        - **HighSpeedContractDataExtractor**: Performs rapid, bulk data extraction from one or more documents.
+        - **TalkToCorpus**: Search and analyze metadata, clauses, or terms across a full contract repository. Trigger when you need to find patterns, clauses, or data across multiple documents.
+        - **TalkToDocument**: Ask detailed questions about a single contract — get clause summaries, key terms, and extracted insights. Trigger when working with one document and need to understand or extract clause-level information.
+        - **ObligationFrequencySetupRecommender**: Converts obligation clause language into structured recurring schedules. Trigger when you need to configure obligation frequencies like monthly reporting, audits, etc., based on contract language.
+        - **ServiceLevelFulfillmentAgent**: Evaluates whether SLA commitments are met, based on incident/performance data. Trigger when you need to audit or confirm SLA compliance.
+        - **TemplateHarmonization**: Creates standardized contract templates by comparing multiple agreements and extracting common/variant clauses. Trigger when you need to unify diverse legacy contracts into a base template.
+        - **ConvoCreate**: Guides users step-by-step through interactive contract drafting using templates. Trigger when you want to create a new contract (e.g., NDA, MSA) with structured inputs.
+        - **CrossReferenceCheck**: Detects and fixes broken, incorrect, or outdated clause references and hyperlinks. Trigger when you've edited or reordered a document and need to verify all internal references are accurate.
+        - **NumberingCheck**: Validates and auto-fixes clause, table, and annex numbering across the document. Trigger when a contract's structure may have misaligned or skipped numbering (e.g., after edits or merges).
+        - **DefinitionsCheck**: Flags undefined, duplicate, or inconsistent use of capitalized defined terms. Trigger when you want to ensure clarity and consistency of terms before signing or review.
+        - **TeamsIntegration**: Connects the platform with MS Teams for sending updates, posting clauses, triggering workflows. Trigger when you need to share insights, get approvals, or route documents via Teams.
+        - **AskTim**: Legal research assistant for interpreting legal terms, comparing jurisdictions, and suggesting fallback clauses. Trigger when you have legal interpretation questions or need precedent-based guidance.
+        - **PlaybookGeneratorBuilder**: Builds redlining and clause deviation playbooks from past contracts and templates. Trigger when you need structured review guidelines or want to detect risk based on historical language.
+        - **SupplierOnboardingCopilot**: Automates supplier onboarding across systems, handling compliance, data validation, and tracking. Trigger when you're onboarding new suppliers or checking onboarding status, especially via Salesforce, Ariba, etc.
         - **HumanAssistant**: Asks you, the user, for clarification, missing information, a decision, or for documents/clauses.
 
         ---
@@ -121,20 +123,20 @@ class PlannerAgent:
             if not isinstance(final_state, dict):
                 raise ValueError("Final state must be a dictionary")
             
-            # New prompt that explicitly asks for a list of agents
+            # New prompt that shows thought process instead of summary
             synthesis_prompt_template = """
-            You are a manager reporting on a completed task. 
-            Your response must be a simple, factual summary of the actions taken.
+            You are a planner agent showing your thought process. Instead of providing a summary of results, 
+            explain your thinking process and how you approached the user's request.
             
-            Start your summary with a clear, bulleted list of all the specialized agents that were used to handle the request.
-            Then, provide a brief narrative of what was accomplished.
+            Show the step-by-step reasoning you used to determine which agents to use and why.
+            Focus on the decision-making process and logic behind the plan execution.
 
             Original User Query: "{query}"
             
             Execution Results (JSON State):
             {state}
 
-            Your Summary:
+            Your Thought Process:
             """
             
             synthesis_chain = (
