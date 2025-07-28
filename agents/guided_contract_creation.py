@@ -41,27 +41,8 @@ class GuidedContractCreationAssistant(BaseAgent):
         )
     
     def _execute_task(self, task: str, state: ExecutionState) -> str:
-        """
-        Execute contract creation task with guided workflow.
-        
-        Args:
-            task: The contract creation request or task description
-            state: Current execution state
-            
-        Returns:
-            str: Contract draft or creation result
-        """
-        self.logger.info(f"Guided Contract Creation Assistant received request: {task}")
-        
-        # Generate contract draft response
-        result = f"Acknowledged. I have prepared a draft for the following task: {task}."
-        
-        # Add to state's drafted contracts
-        state.drafted_contracts.append(result)
-        
-        # Log successful contract drafting
-        self.logger.info(f"Contract draft prepared for: {task}")
-        
+        """Execute contract creation task with mock response."""
+        result = f"Received {task} and completed contract creation task"
         return result
     def get_name(self):
         return "GuidedContractCreationAssistant"

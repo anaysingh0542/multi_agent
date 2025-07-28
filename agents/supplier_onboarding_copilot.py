@@ -32,20 +32,9 @@ class SupplierOnboardingCopilot(BaseAgent):
         """Execute supplier onboarding task logic."""
         self.logger.info(f"Processing supplier onboarding task: {task}")
         
-        # Extract supplier information from task
-        supplier_info = self._extract_supplier_info(task)
+        result = f"Received {task} and completed supplier onboarding task"
         
-        # Simulate onboarding steps
-        onboarding_steps = [
-            "Supplier verification initiated",
-            "Document requirements sent",
-            "Compliance check scheduled",
-            "Onboarding workflow created"
-        ]
-        
-        result = f"Supplier onboarding initiated for '{supplier_info}'. Steps: {', '.join(onboarding_steps)}"
-        
-        # Update state with onboarding status
+        # Update state with result
         state.onboarding_status.append(result)
         
         return result

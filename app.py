@@ -8,8 +8,8 @@ from core.base_agent import agent_registry
 from typing import Dict, Any
 import logging
 
-# Import all agent classes
-from agents.planner_agent import PlannerAgent
+# Import orchestrator
+from core.claude_orchestrator import ClaudeOrchestrator
 from agents.supplier_onboarding_copilot import SupplierOnboardingCopilot
 from agents.human_assistant import HumanAssistant
 from agents.guided_contract_creation import GuidedContractCreationAssistant
@@ -33,16 +33,11 @@ st.title("Multi-Agent Co-Pilot 🤖")
 
 # --- AGENT INITIALIZATION ---
 @st.cache_resource
-def initialize_agents() -> tuple[PlannerAgent, Dict[str, Any]]:
+def initialize_agents() -> tuple[ClaudeOrchestrator, Dict[str, Any]]:
     """Initialize all agents with proper error handling."""
     try:
-        # The call to load_dotenv() has been removed.
-        # Streamlit automatically loads secrets as environment variables.
-        if not os.getenv("OPENAI_API_KEY"):
-            st.error("FATAL: OPENAI_API_KEY environment variable not set! Please add it to your Streamlit secrets.")
-            st.stop()
-        
-        planner = PlannerAgent(agent_knowledge_path="./data/agent_routing_knowledge.xlsx")
+        # Create Claude orchestrator (no API key needed for mock agents)
+        orchestrator = ClaudeOrchestrator()
         
         # Create agent instances and register them
         agents = [
@@ -66,13 +61,13 @@ def initialize_agents() -> tuple[PlannerAgent, Dict[str, Any]]:
         for agent in agents:
             agent_registry.register(agent)
             agent_map[agent.get_name()] = agent
-        return planner, agent_map
+        return orchestrator, agent_map
     except Exception as e:
         logger.error(f"Failed to initialize agents: {e}")
         st.error(f"Failed to initialize agents: {e}")
         st.stop()
 
-planner, agent_map = initialize_agents()
+orchestrator, agent_map = initialize_agents()
 
 # --- SESSION STATE MANAGEMENT ---
 # Initialize session ID and persistent memory
@@ -137,8 +132,8 @@ if prompt := st.chat_input("Create an MSA for..."):
     with st.chat_message("assistant"):
         with st.spinner("The Co-Pilot is thinking..."):
             try:
-                # 1. Planner creates a plan using the new method with memory
-                plan = planner.get_plan(prompt_with_context, st.session_state.memory)
+                # 1. Claude orchestrator creates a plan by decomposing the query
+                plan = orchestrator.create_execution_plan(prompt_with_context)
 
                 if not plan:
                     st.error("I'm sorry, I couldn't devise a plan for that request.")
@@ -175,9 +170,9 @@ if prompt := st.chat_input("Create an MSA for..."):
                             logger.error(error_msg)
                             thought_process += f"    ↳ Error: {error_msg}\n"
                     
-                    final_summary = planner.synthesize_final_response(
+                    final_summary = orchestrator.synthesize_response(
                         initial_query=prompt,
-                        final_state=execution_state
+                        execution_results=execution_state
                     )
                     
                     with st.expander("Show thought process"):

@@ -44,13 +44,10 @@ class HumanAssistant(BaseAgent):
         Returns:
             str: Formatted question for human interaction
         """
-        # In a Streamlit app, this agent doesn't "do" anything except
-        # allow the Planner to formulate a question.
-        # The question ('task') is returned to the UI by the main app loop.
-        result = f"A question was formulated for the human: '{task}'"
-        
         # Log the interaction for tracking
-        self.logger.info(f"Formulated question for user: {task}")
+        self.logger.info(f"Processing human assistant task: {task}")
+        
+        result = f"Received {task} and completed human interaction task"
         
         return result
     def get_name(self):

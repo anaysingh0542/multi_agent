@@ -52,21 +52,7 @@ class LegalResearchAssistant(BaseAgent):  # This is "AskTim"
         Returns:
             str: Legal research findings and analysis
         """
-        self.logger.info(f"Legal Research Assistant (AskTim) received query: {task}")
-        
-        # In a real scenario, this would be a detailed finding with:
-        # - Case law citations
-        # - Regulatory references
-        # - Legal precedents
-        # - Compliance recommendations
-        result = f"Confirmed. I have performed the requested legal research on: {task}."
-
-        # Add result to the shared state
-        state.legal_findings.append(result)
-        
-        # Log successful research completion
-        self.logger.info(f"Legal research completed for: {task}")
-
+        result = f"Received {task} and completed legal research task"
         return result
     def get_name(self):
         return "LegalResearchAssistant"
