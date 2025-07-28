@@ -1,15 +1,14 @@
 import streamlit as st
 import os
-# The 'dotenv' import has been removed as it's not needed for Streamlit secrets
 from langchain.memory import ConversationBufferMemory
 from langchain_core.chat_history import InMemoryChatMessageHistory
-from core.memory_manager import memory_manager, LangChainMemoryAdapter
+from core.memory_manager import LangChainMemoryAdapter
 from core.base_agent import agent_registry
 from typing import Dict, Any
 import logging
 
-# Import orchestrator
-from core.claude_orchestrator import ClaudeOrchestrator
+# Import the PlannerAgent instead of the orchestrator
+from agents.planner_agent import PlannerAgent
 from agents.supplier_onboarding_copilot import SupplierOnboardingCopilot
 from agents.human_assistant import HumanAssistant
 from agents.guided_contract_creation import GuidedContractCreationAssistant
@@ -33,11 +32,11 @@ st.title("Multi-Agent Co-Pilot 🤖")
 
 # --- AGENT INITIALIZATION ---
 @st.cache_resource
-def initialize_agents() -> tuple[ClaudeOrchestrator, Dict[str, Any]]:
+def initialize_agents() -> tuple[PlannerAgent, Dict[str, Any]]:
     """Initialize all agents with proper error handling."""
     try:
-        # Create Claude orchestrator (no API key needed for mock agents)
-        orchestrator = ClaudeOrchestrator()
+        # Use the PlannerAgent
+        planner = PlannerAgent()
         
         # Create agent instances and register them
         agents = [
@@ -59,15 +58,18 @@ def initialize_agents() -> tuple[ClaudeOrchestrator, Dict[str, Any]]:
         # Register agents and create map
         agent_map = {}
         for agent in agents:
+            # The get_name method is called on the agent instance
+            agent_name = agent.get_name() 
             agent_registry.register(agent)
-            agent_map[agent.get_name()] = agent
-        return orchestrator, agent_map
+            agent_map[agent_name] = agent
+
+        return planner, agent_map
     except Exception as e:
         logger.error(f"Failed to initialize agents: {e}")
         st.error(f"Failed to initialize agents: {e}")
         st.stop()
 
-orchestrator, agent_map = initialize_agents()
+planner, agent_map = initialize_agents()
 
 # --- SESSION STATE MANAGEMENT ---
 # Initialize session ID and persistent memory
@@ -132,8 +134,8 @@ if prompt := st.chat_input("Create an MSA for..."):
     with st.chat_message("assistant"):
         with st.spinner("The Co-Pilot is thinking..."):
             try:
-                # 1. Claude orchestrator creates a plan by decomposing the query
-                plan = orchestrator.create_execution_plan(prompt_with_context)
+                # 1. PlannerAgent creates a plan
+                plan = planner.get_plan(prompt_with_context, st.session_state.memory)
 
                 if not plan:
                     st.error("I'm sorry, I couldn't devise a plan for that request.")
@@ -163,6 +165,7 @@ if prompt := st.chat_input("Create an MSA for..."):
                             continue
 
                         try:
+                            # The run method is called on the agent instance
                             result = target_agent.run(task=task_description, state=execution_state)
                             thought_process += f"    ↳ Result: {result}\n"
                         except Exception as e:
@@ -170,9 +173,9 @@ if prompt := st.chat_input("Create an MSA for..."):
                             logger.error(error_msg)
                             thought_process += f"    ↳ Error: {error_msg}\n"
                     
-                    final_summary = orchestrator.synthesize_response(
+                    final_summary = planner.synthesize_final_response(
                         initial_query=prompt,
-                        execution_results=execution_state
+                        final_state=execution_state
                     )
                     
                     with st.expander("Show thought process"):
