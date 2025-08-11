@@ -1,0 +1,45 @@
+{
+  "plan_id": "plan-a1d4e9",
+  "name": "Comprehensive Supplier Report Generation",
+  "description": "Gathers SLA and obligation data in parallel, then synthesizes a report.",
+  "root": {
+    "id": "main_sequence",
+    "type": "sequential",
+    "tasks": [
+      {
+        "id": "parallel_data_gathering",
+        "type": "parallel",
+        "tasks": [
+          {
+            "id": "get_sla_metrics",
+            "type": "agent_call",
+            "agent_id": "service_level_agent",
+            "parameters": {
+              "supplier_name": "Delta Tech",
+              "period": "current_quarter"
+            }
+          },
+          {
+            "id": "get_obligations",
+            "type": "agent_call",
+            "agent_id": "obligations_manager",
+            "parameters": {
+              "query": "Find all outstanding obligations for supplier 'Delta Tech'"
+            }
+          }
+        ]
+      },
+      {
+        "id": "synthesize_report",
+        "type": "agent_call",
+        "agent_id": "report_synthesizer",
+        "parameters": {
+          "title": "Q3 Performance Report for Delta Tech",
+          "sla_data": "{{steps.parallel_data_gathering.get_sla_metrics.output}}",
+          "obligation_data": "{{steps.parallel_data_gathering.get_obligations.output}}"
+        }
+      }
+    ]
+  }
+}
+

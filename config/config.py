@@ -26,6 +26,11 @@ class Config:
     # Application Settings
     max_retries: int = 3
     timeout_seconds: int = 30
+
+    # Executor Settings
+    executor_max_workers: int = 4
+    executor_max_iters: int = 5
+    executor_global_step_cap: int = 50
     
     @classmethod
     def from_env(cls) -> "Config":
@@ -45,6 +50,9 @@ class Config:
             log_format=os.getenv("LOG_FORMAT", "%(asctime)s [%(levelname)s] [%(name)s] - %(message)s"),
             max_retries=int(os.getenv("MAX_RETRIES", "3")),
             timeout_seconds=int(os.getenv("TIMEOUT_SECONDS", "30")),
+            executor_max_workers=int(os.getenv("EXECUTOR_MAX_WORKERS", "4")),
+            executor_max_iters=int(os.getenv("EXECUTOR_MAX_ITERS", "5")),
+            executor_global_step_cap=int(os.getenv("EXECUTOR_GLOBAL_STEP_CAP", "50")),
         )
     
     def validate(self) -> None:

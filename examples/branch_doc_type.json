@@ -1,0 +1,41 @@
+{
+  "plan_id": "plan-branch-001",
+  "name": "Branch on doc type",
+  "description": "If doc_type is Internal run a style check (TTD), else run compliance evaluator.",
+  "root": {
+    "id": "branch_root",
+    "type": "sequential",
+    "tasks": [
+      {
+        "id": "decide_by_type",
+        "type": "sequential",
+        "branch_key": "metadata.doc_type",
+        "cases": {
+          "Internal": [
+            {
+              "id": "style_check",
+              "type": "agent_call",
+              "agent_id": "talk_to_document",
+              "parameters": {
+                "document_id": "Doc_Internal_001",
+                "query": "Run basic style check"
+              }
+            }
+          ],
+          "else": [
+            {
+              "id": "compliance_check",
+              "type": "agent_call",
+              "agent_id": "service_level_agent",
+              "parameters": {
+                "supplier_name": "Generic Supplier",
+                "period": "current_quarter"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+

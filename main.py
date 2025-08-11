@@ -30,6 +30,19 @@ def main() -> None:
         legal_agent = LegalResearchAssistant()
         contract_agent = GuidedContractCreationAssistant()
 
+        # Register additional agents for executor-based flows
+        from agents.mediator_agent import MediatorAgent
+        from agents.obligations_manager import ObligationsManager
+        from core.base_agent import agent_registry
+        from agents.TTD import ttd_agent
+        from agents.playbook_builder import PlaybookBuilder
+        from agents.service_level_compliance_evaluator import ServiceLevelComplianceEvaluator
+        agent_registry.register(MediatorAgent())
+        agent_registry.register(ObligationsManager())
+        agent_registry.register(ttd_agent())
+        agent_registry.register(PlaybookBuilder())
+        agent_registry.register(ServiceLevelComplianceEvaluator())
+
         agent_map: Dict[str, Any] = {
             "SupplierOnboardingCopilot": supplier_agent,
             "LegalResearchAssistant": legal_agent,
@@ -61,6 +74,21 @@ def main() -> None:
                     continue
                 
                 execution_state: Dict[str, Any] = {"original_query": user_query}
+
+                # If planner returns high-level plan with root/type, use executor
+                if isinstance(plan, dict) and plan.get("root"):
+                    from core.state_models import ExecutionState
+                    from core.executor import PlanExecutor
+                    exec_state = ExecutionState(session_id="cli-session", original_query=user_query)
+                    executor = PlanExecutor(exec_state)
+                    try:
+                        exec_result = executor.execute(plan)
+                        print(f"\n[Executor] Result: {exec_result.get('final_output')}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Executor error: {e}")
+                        print(f"Executor error: {e}")
+                        continue
                 
                 for i, step in enumerate(plan):
                     agent_name = step.get("agent")

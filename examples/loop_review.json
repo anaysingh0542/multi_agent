@@ -1,0 +1,35 @@
+{
+  "plan_id": "plan-loop-001",
+  "name": "Do-while review loop",
+  "description": "Draft then review; continue while review_status == 'Changes Required'",
+  "root": {
+    "id": "review_cycle",
+    "type": "sequential",
+    "loop": {
+      "do_while": true,
+      "max_iters": 3,
+      "condition": "state.metadata.review_status == 'Changes Required'"
+    },
+    "tasks": [
+      {
+        "id": "draft_clause",
+        "type": "agent_call",
+        "agent_id": "talk_to_document",
+        "parameters": {
+          "document_id": "Drafting_Doc_001",
+          "query": "Draft a clause with current feedback context"
+        }
+      },
+      {
+        "id": "human_review",
+        "type": "agent_call",
+        "agent_id": "review_decision",
+        "parameters": {
+          "question_context": "Please review the drafted clause and provide a decision.",
+          "previous_review_status": "{{steps.human_review.output.review_status}}"
+        }
+      }
+    ]
+  }
+}
+

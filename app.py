@@ -22,6 +22,9 @@ from agents.obligation_recurrence_recommender import ObligationRecurrenceRecomme
 from agents.high_speed_contract_data_extractor import HighSpeedContractDataExtractor
 from agents.contract_template_harmonizer import ContractTemplateHarmonizer
 from agents.service_level_compliance_evaluator import ServiceLevelComplianceEvaluator
+from agents.mediator_agent import MediatorAgent
+from agents.obligations_manager import ObligationsManager
+from core.executor import PlanExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +56,9 @@ def initialize_agents() -> tuple[PlannerAgent, Dict[str, Any]]:
             HighSpeedContractDataExtractor(),
             ContractTemplateHarmonizer(),
             ServiceLevelComplianceEvaluator(),
+        ] + [
+            MediatorAgent(),
+            ObligationsManager(),
         ]
         
         # Register agents and create map
@@ -157,6 +163,85 @@ if prompt := st.chat_input("Create an MSA for..."):
                     execution_state = {"original_query": prompt}
                     thought_process = ""
                     
+                    # If planner returned the new high-level plan with a root/type, use the executor
+                    if isinstance(plan, dict) and plan.get("root"):
+                        from core.state_models import ExecutionState
+                        exec_state = ExecutionState(session_id=st.session_state.session_id, original_query=prompt)
+                        executor = PlanExecutor(exec_state)
+                        try:
+                            exec_result = executor.execute(plan)
+                            thought_process += f"\n[Executor] Ran high-level plan with result keys: {list(exec_result.keys())}\n"
+                            final_response = str(exec_result.get("final_output"))
+                            trace = exec_result.get("trace", [])
+                            with st.expander("Show execution trace"):
+                                # Group by step id
+                                grouped = {}
+                                for ev in trace:
+                                    sid = ev.get("id", ev.get("root_id", "_meta"))
+                                    grouped.setdefault(sid, []).append(ev)
+                                for sid, events in grouped.items():
+                                    st.markdown(f"Step: {sid}")
+                                    for ev in events:
+                                        st.code(str(ev))
+                                    st.markdown("---")
+
+                            # Check for HITL event and offer prompt to continue
+                            hitl_events = [ev for ev in trace if ev.get("event") == "hitl"]
+                            if hitl_events:
+                                st.warning("Additional input is required to continue.")
+                                st.write(hitl_events[0].get("message", ""))
+
+                                # Persist plan and exec_state for re-run after user input
+                                st.session_state.pending_plan = plan
+                                st.session_state.pending_state = exec_state.dict()
+
+                                def set_dotted(d, dotted_key, value):
+                                    parts = dotted_key.split('.') if dotted_key else []
+                                    cur = d
+                                    for p in parts[:-1]:
+                                        if p not in cur or not isinstance(cur[p], dict):
+                                            cur[p] = {}
+                                        cur = cur[p]
+                                    cur[parts[-1]] = value
+
+                                with st.form("hitl_form"):
+                                    key_path = st.text_input("State key to set (dotted)", value="metadata.review_status")
+                                    val = st.text_input("Value")
+                                    submitted = st.form_submit_button("Apply and re-run")
+                                    if submitted:
+                                        # Update stored state and re-run
+                                        state_dict = st.session_state.pending_state
+                                        set_dotted(state_dict, key_path, val)
+                                        from core.state_models import ExecutionState as ES
+                                        new_state = ES(**state_dict)
+                                        new_executor = PlanExecutor(new_state)
+                                        new_result = new_executor.execute(st.session_state.pending_plan)
+                                        new_trace = new_result.get("trace", [])
+                                        with st.expander("Show execution trace (after HITL)"):
+                                            grouped2 = {}
+                                            for ev in new_trace:
+                                                sid = ev.get("id", ev.get("root_id", "_meta"))
+                                                grouped2.setdefault(sid, []).append(ev)
+                                            for sid, events in grouped2.items():
+                                                st.markdown(f"Step: {sid}")
+                                                for ev in events:
+                                                    st.code(str(ev))
+                                                st.markdown("---")
+                                        new_final = str(new_result.get("final_output"))
+                                        st.markdown(new_final)
+                                        st.session_state.messages.append({"role": "assistant", "content": new_final})
+                                        st.session_state.memory.save_context({"input": prompt}, {"output": new_final})
+                            else:
+                                st.markdown(final_response)
+                                st.session_state.messages.append({"role": "assistant", "content": final_response})
+                                st.session_state.memory.save_context({"input": prompt}, {"output": final_response})
+                            st.stop()
+                        except Exception as e:
+                            error_msg = f"Executor error: {e}"
+                            logger.error(error_msg)
+                            st.error(error_msg)
+                            st.stop()
+
                     # Execute each step in the plan
                     for i, step in enumerate(plan):
                         agent_name = step.get("agent")

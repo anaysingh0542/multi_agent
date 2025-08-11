@@ -1,0 +1,30 @@
+{
+  "plan_id": "plan-7b8c2f",
+  "name": "Parallel Document Analysis",
+  "description": "Summarizes payment terms and identifies risky clauses in parallel.",
+  "root": {
+    "id": "parallel_analysis",
+    "type": "parallel",
+    "tasks": [
+      {
+        "id": "summarize_terms",
+        "type": "agent_call",
+        "agent_id": "talk_to_document",
+        "parameters": {
+          "document_id": "Vendor_Agreement_Q3_2024.docx",
+          "query": "Summarize the key payment terms."
+        }
+      },
+      {
+        "id": "find_risks",
+        "type": "agent_call",
+        "agent_id": "playbook_generator",
+        "parameters": {
+          "document_id": "Vendor_Agreement_Q3_2024.docx",
+          "playbook_id": "standard_risk_analysis"
+        }
+      }
+    ]
+  }
+}
+
